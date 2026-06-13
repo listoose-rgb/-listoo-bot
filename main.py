@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Listoo Telegram Bot v3 - با دسته‌بندی
+# Listoo Telegram Bot v4
 # @Listoo_se_bot
 
 import logging
@@ -15,74 +15,54 @@ ADMIN_ID = 7899749173
 
 logging.basicConfig(level=logging.INFO)
 
-(MAIN_MENU, GET_TITLE, GET_DESC, GET_PRICE, GET_LOCATION, 
+(MAIN_MENU, GET_TITLE, GET_DESC, GET_PRICE, GET_LOCATION,
  GET_PHOTO, GET_CONTACT, GET_DELETE_ID) = range(8)
 
-# ── START ──
+MENU_KEYBOARD = [
+    ["🏠 Bostad", "🚗 Fordon"],
+    ["📱 Elektronik", "🛋️ Möbler"],
+    ["💼 Jobb", "📦 Övrigt"],
+    ["🗑️ Ta bort annons", "📞 Support"]
+]
+
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        ["🏠 Bostad", "🚗 Fordon"],
-        ["📱 Elektronik", "🛋️ Möbler"],
-        ["💼 Jobb", "📦 Övrigt"],
-        ["🗑️ Ta bort annons", "📞 Support"]
-    ]
-    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    markup = ReplyKeyboardMarkup(MENU_KEYBOARD, resize_keyboard=True)
     await update.message.reply_text(
-        "🟠 Välkommen till *Listoo*!\n\n"
-        "Köp, sälj och hitta jobb.\n\n"
-        "Välj en kategori 👇",
+        "🟠 Välkommen till *Listoo*!\n\nKöp, sälj och hitta jobb.\n\nVälj en kategori 👇",
         parse_mode="Markdown",
         reply_markup=markup
     )
     return MAIN_MENU
 
-# ── MAIN MENU ──
 async def main_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-
     categories = {
         "🏠 Bostad": "bostad",
-        "🚗 Fordon": "fordon", 
+        "🚗 Fordon": "fordon",
         "📱 Elektronik": "elektronik",
         "🛋️ Möbler": "möbler",
         "💼 Jobb": "jobb",
         "📦 Övrigt": "övrigt"
     }
-
     if text in categories:
         ctx.user_data['category'] = categories[text]
         ctx.user_data['type'] = 'jobb' if text == "💼 Jobb" else 'annons'
-        
-        emoji = text.split()[0]
-        cat_name = text
-        
         await update.message.reply_text(
-            f"{emoji} *{cat_name}*\n\nSkriv en titel för din annons:",
+            text + "\n\nSkriv en titel för din annons:",
             parse_mode="Markdown"
         )
         return GET_TITLE
-
     elif "bort" in text:
-        await update.message.reply_text(
-            "🗑️ *Ta bort annons*\n\n"
-            "Skriv titeln på din annons:",
-            parse_mode="Markdown"
-        )
+        await update.message.reply_text("🗑️ Skriv titeln på annonsen du vill ta bort:")
         return GET_DELETE_ID
-
     elif "Support" in text:
         await update.message.reply_text(
-            "📞 *Support*\n\n"
-            "📧 info@listoo.se\n"
-            "🌐 listoo.se\n"
-            "📢 @listoo_se",
+            "📞 *Support*\n\n📧 info@listoo.se\n🌐 listoo.se\n📢 @listoo_se",
             parse_mode="Markdown"
         )
         return MAIN_MENU
-
     return MAIN_MENU
 
-# ── مراحل ثبت آگهی ──
 async def get_title(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['title'] = update.message.text
     await update.message.reply_text("✍️ Beskriv varan:")
@@ -90,7 +70,7 @@ async def get_title(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def get_desc(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['desc'] = update.message.text
-    label = "💰 Lon (kr/man):" if ctx.user_data.get('type') == 'jobb' else "💰 Pris (kr):"
+    label = "💰 Lön (kr/mån):" if ctx.user_data.get('type') == 'jobb' else "💰 Pris (kr):"
     await update.message.reply_text(label)
     return GET_PRICE
 
@@ -117,81 +97,43 @@ async def skip_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📬 Din e-post eller telefon:")
     return GET_CONTACT
 
-# ── درخواست حذف ──
 async def get_delete_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     title = update.message.text
     user = update.message.from_user
     username = user.username or user.first_name
-
     keyboard = [[
-        InlineKeyboardButton("✅ حذف کن", callback_data=f"delete_{user.id}_{title[:20]}"),
-        InlineKeyboardButton("❌ رد کن", callback_data=f"nodelet_{user.id}")
+        InlineKeyboardButton("✅ حذف کن", callback_data="delete_" + str(user.id) + "_" + title[:20]),
+        InlineKeyboardButton("❌ رد کن", callback_data="nodelet_" + str(user.id))
     ]]
-    markup = InlineKeyboardMarkup(keyboard)
-
     await ctx.bot.send_message(
         chat_id=ADMIN_ID,
-        text=f"🗑️ *درخواست حذف آگهی*\n\n"
-             f"👤 کاربر: @{username}\n"
-             f"📌 عنوان: *{title}*",
-        parse_mode="Markdown",
-        reply_markup=markup
+        text="🗑️ درخواست حذف\n\n👤 @" + username + "\n📌 " + title,
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
-
+    markup = ReplyKeyboardMarkup(MENU_KEYBOARD, resize_keyboard=True)
     await update.message.reply_text(
-        "✅ درخواست حذف ارسال شد!\n\n"
-        "ادمین بررسی می‌کنه و آگهیت رو پاک می‌کنه.\n"
-        "معمولاً در ۲۴ ساعت انجام میشه! 🟠"
+        "✅ درخواست حذف ارسال شد!\nادمین بررسی می‌کنه. 🟠",
+        reply_markup=markup
     )
     return MAIN_MENU
 
-# ── ارسال به ادمین ──
 async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['contact'] = update.message.text
     ctx.user_data['user_id'] = update.message.from_user.id
     ctx.user_data['username'] = update.message.from_user.username or update.message.from_user.first_name
     d = ctx.user_data
 
-    cat = d.get('category', 'övrigt').upper()
+    cat = d.get('category', 'ovrigt').upper()
     cat_emojis = {
         'BOSTAD': '🏠', 'FORDON': '🚗', 'ELEKTRONIK': '📱',
-        'MÖBLER': '🛋️', 'JOBB': '💼', 'ÖVRIGT': '📦'
+        'MOBLER': '🛋️', 'JOBB': '💼', 'OVRIGT': '📦'
     }
     emoji = cat_emojis.get(cat, '📦')
     price_label = "💰 Lön" if d['type'] == 'jobb' else "💰 Pris"
 
-    # متن کوتاه برای کانال
-    short_caption = (
-        f"{emoji} *{d['title']}*
-"
-        f"{price_label}: *{d['price']} kr*
-"
-        f"📍 {d['location']}
+    short_caption = emoji + " *" + d['title'] + "*\n" + price_label + ": *" + d['price'] + " kr*\n📍 " + d['location'] + "\n\n🟠 listoo.se"
+    full_info = emoji + " *" + d['title'] + "*\n\n📝 " + d['desc'] + "\n\n" + price_label + ": *" + d['price'] + " kr*\n📍 " + d['location'] + "\n\n📬 Kontakt: `" + d['contact'] + "`\n\n✅ listoo.se"
 
-"
-        f"🟠 listoo.se"
-    )
-
-    # متن کامل برای وقتی دکمه زده میشه
-    full_info = (
-        f"{emoji} *{d['title']}*
-
-"
-        f"📝 {d['desc']}
-
-"
-        f"{price_label}: *{d['price']} kr*
-"
-        f"📍 {d['location']}
-
-"
-        f"📬 Kontakt: `{d['contact']}`
-
-"
-        f"✅ listoo.se"
-    )
-
-    # ذخیره اطلاعات کامل
     ad_id = str(d['user_id'])
     ctx.bot_data[ad_id] = {
         'caption': short_caption,
@@ -201,59 +143,48 @@ async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     }
 
     keyboard = [[
-        InlineKeyboardButton("✅ تأیید", callback_data=f"approve_{d['user_id']}"),
-        InlineKeyboardButton("❌ رد", callback_data=f"reject_{d['user_id']}")
+        InlineKeyboardButton("✅ تأیید", callback_data="approve_" + ad_id),
+        InlineKeyboardButton("❌ رد", callback_data="reject_" + ad_id)
     ]]
-    markup = InlineKeyboardMarkup(keyboard)
 
-    admin_text = f"⚠️ *آگهی جدید — {emoji} {cat}*
-
-👤 @{d['username']}
-
-{full_info}"
+    admin_text = "⚠️ آگهی جدید — " + emoji + " " + cat + "\n\n👤 @" + d['username'] + "\n\n" + full_info
 
     try:
         if d.get('photo'):
             await ctx.bot.send_photo(
                 chat_id=ADMIN_ID, photo=d['photo'],
-                caption=admin_text, parse_mode="Markdown", reply_markup=markup
+                caption=admin_text, parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
             )
         else:
             await ctx.bot.send_message(
                 chat_id=ADMIN_ID, text=admin_text,
-                parse_mode="Markdown", reply_markup=markup
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
             )
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.error(str(e))
 
-    keyboard = [
-        ["🏠 Bostad", "🚗 Fordon"],
-        ["📱 Elektronik", "🛋️ Möbler"],
-        ["💼 Jobb", "📦 Övrigt"],
-        ["🗑️ Ta bort annons", "📞 Support"]
-    ]
-    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    markup = ReplyKeyboardMarkup(MENU_KEYBOARD, resize_keyboard=True)
     await update.message.reply_text(
-        "✅ *Tack! Din annons granskas.*\n\nVi publicerar den inom kort! 🟠\n\nVill du lägga upp en ny annons? Välj kategori 👇",
+        "✅ *Tack! Din annons granskas.*\n\nVi publicerar den inom kort! 🟠\n\nVälj kategori för ny annons 👇",
         parse_mode="Markdown",
         reply_markup=markup
     )
     ctx.user_data.clear()
     return MAIN_MENU
 
-# ── تأیید/رد ادمین ──
 async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
 
-    if data.startswith("approve_") or data.startswith("reject_"):
-        action, user_id = data.split('_', 1)
+    if data.startswith("approve_"):
+        user_id = data.replace("approve_", "")
         ad = ctx.bot_data.get(user_id)
-
-        if action == "approve" and ad:
+        if ad:
             keyboard = [[
-                InlineKeyboardButton("📋 Visa mer info", callback_data=f"info_{user_id}"),
+                InlineKeyboardButton("📋 Visa mer info", callback_data="info_" + user_id),
                 InlineKeyboardButton("🌐 Listoo.se", url="https://listoo.se")
             ]]
             markup = InlineKeyboardMarkup(keyboard)
@@ -261,7 +192,8 @@ async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 if ad.get('photo'):
                     await ctx.bot.send_photo(
                         chat_id=CHANNEL_ID, photo=ad['photo'],
-                        caption=ad['caption'], parse_mode="Markdown", reply_markup=markup
+                        caption=ad['caption'], parse_mode="Markdown",
+                        reply_markup=markup
                     )
                 else:
                     await ctx.bot.send_message(
@@ -270,63 +202,61 @@ async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                     )
                 await ctx.bot.send_message(
                     chat_id=int(user_id),
-                    text="🎉 *آگهی شما تأیید و منتشر شد!*\n\n👉 @listoo_se",
+                    text="🎉 آگهی شما منتشر شد!\n\n👉 @listoo_se",
                     parse_mode="Markdown"
                 )
                 await query.edit_message_text("✅ آگهی منتشر شد!")
             except Exception as e:
-                logging.error(f"Error: {e}")
+                logging.error(str(e))
+        ctx.bot_data.pop(user_id, None)
 
-        elif action == "reject":
-            await ctx.bot.send_message(
-                chat_id=int(user_id),
-                text="❌ *آگهی شما تأیید نشد.*\n\nبرای اطلاعات: info@listoo.se",
-                parse_mode="Markdown"
-            )
-            await query.edit_message_text("❌ آگهی رد شد!")
+    elif data.startswith("reject_"):
+        user_id = data.replace("reject_", "")
+        await ctx.bot.send_message(
+            chat_id=int(user_id),
+            text="❌ آگهی شما تأیید نشد.\n\nاطلاعات: info@listoo.se"
+        )
+        await query.edit_message_text("❌ آگهی رد شد!")
         ctx.bot_data.pop(user_id, None)
 
     elif data.startswith("info_"):
-        user_id = data.split('_')[1]
+        user_id = data.replace("info_", "")
         ad = ctx.bot_data.get(user_id)
         if ad:
             await query.answer(ad.get('full_info', 'اطلاعات موجود نیست'), show_alert=True)
         else:
-            await query.answer('اطلاعات در دسترس نیست', show_alert=True)
+            await query.answer("اطلاعات در دسترس نیست", show_alert=True)
 
     elif data.startswith("delete_"):
-        parts = data.split('_', 2)
+        parts = data.split("_", 2)
         user_id = parts[1]
         title = parts[2] if len(parts) > 2 else "نامشخص"
         await ctx.bot.send_message(
             chat_id=int(user_id),
-            text=f"✅ آگهی *{title}* حذف شد! 🟠",
-            parse_mode="Markdown"
+            text="✅ آگهی " + title + " حذف شد! 🟠"
         )
-        await query.edit_message_text(f"✅ حذف تأیید شد!\n⚠️ خودت از کانال پاک کن!")
+        await query.edit_message_text("✅ حذف تأیید شد!\n⚠️ خودت از کانال پاک کن!")
 
     elif data.startswith("nodelet_"):
-        user_id = data.split('_')[1]
+        user_id = data.replace("nodelet_", "")
         await ctx.bot.send_message(
             chat_id=int(user_id),
-            text="❌ درخواست حذف رد شد.\n\nبرای اطلاعات: info@listoo.se"
+            text="❌ درخواست حذف رد شد."
         )
         await query.edit_message_text("❌ درخواست رد شد!")
 
-# ── CANCEL ──
 async def cancel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data.clear()
-    await update.message.reply_text("❌ Avbröts. Skriv /start för att börja igen.")
-    return ConversationHandler.END
+    markup = ReplyKeyboardMarkup(MENU_KEYBOARD, resize_keyboard=True)
+    await update.message.reply_text("❌ Avbröts.", reply_markup=markup)
+    return MAIN_MENU
 
-# ── MAIN ──
 def main():
     app = Application.builder().token(TOKEN).build()
-
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu), CommandHandler("start", start)],
+            MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu)],
             GET_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_title)],
             GET_DESC: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_desc)],
             GET_PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_price)],
@@ -341,12 +271,11 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel), CommandHandler("start", start)],
         allow_reentry=True,
     )
-
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(handle_approval))
-
-    print("🟠 Listoo Bot v3 در حال اجراست...")
+    print("🟠 Listoo Bot v4 در حال اجراست...")
     app.run_polling()
 
 if __name__ == "__main__":
     main()
+
