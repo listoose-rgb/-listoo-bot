@@ -211,7 +211,7 @@ async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         reply_markup=markup
     )
     ctx.user_data.clear()
-    return ConversationHandler.END
+    return MAIN_MENU
 
 # ── تأیید/رد ادمین ──
 async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
