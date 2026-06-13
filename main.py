@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Listoo Telegram Bot v2 - با سیستم حذف آگهی
+# Listoo Telegram Bot v3 - با دسته‌بندی
 # @Listoo_se_bot
 
 import logging
@@ -15,20 +15,22 @@ ADMIN_ID = 7899749173
 
 logging.basicConfig(level=logging.INFO)
 
-(MAIN_MENU, GET_TITLE, GET_DESC, GET_PRICE, GET_LOCATION, GET_PHOTO, GET_CONTACT, GET_DELETE_ID) = range(8)
+(MAIN_MENU, GET_TITLE, GET_DESC, GET_PRICE, GET_LOCATION, 
+ GET_PHOTO, GET_CONTACT, GET_DELETE_ID) = range(8)
 
 # ── START ──
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        ["📦 Lägg upp annons", "💼 Lägg upp jobb"],
-        ["🗑️ Ta bort annons", "🔍 Sök annonser"],
-        ["📞 Support"]
+        ["🏠 Bostad", "🚗 Fordon"],
+        ["📱 Elektronik", "🛋️ Möbler"],
+        ["💼 Jobb", "📦 Övrigt"],
+        ["🗑️ Ta bort annons", "📞 Support"]
     ]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
         "🟠 Välkommen till *Listoo*!\n\n"
         "Köp, sälj och hitta jobb.\n\n"
-        "Välj ett alternativ 👇",
+        "Välj en kategori 👇",
         parse_mode="Markdown",
         reply_markup=markup
     )
@@ -38,46 +40,57 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def main_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
-    if "annons" in text and "bort" not in text:
-        ctx.user_data['type'] = 'annons'
-        await update.message.reply_text("📦 *Ny annons*\n\nSkriv en titel:", parse_mode="Markdown")
+    categories = {
+        "🏠 Bostad": "bostad",
+        "🚗 Fordon": "fordon", 
+        "📱 Elektronik": "elektronik",
+        "🛋️ Möbler": "möbler",
+        "💼 Jobb": "jobb",
+        "📦 Övrigt": "övrigt"
+    }
+
+    if text in categories:
+        ctx.user_data['category'] = categories[text]
+        ctx.user_data['type'] = 'jobb' if text == "💼 Jobb" else 'annons'
+        
+        emoji = text.split()[0]
+        cat_name = text
+        
+        await update.message.reply_text(
+            f"{emoji} *{cat_name}*\n\nSkriv en titel för din annons:",
+            parse_mode="Markdown"
+        )
         return GET_TITLE
-    elif "jobb" in text:
-        ctx.user_data['type'] = 'jobb'
-        await update.message.reply_text("💼 *Nytt jobb*\n\nSkriv jobbtiteln:", parse_mode="Markdown")
-        return GET_TITLE
-    elif "bort" in text or "Ta bort" in text:
+
+    elif "bort" in text:
         await update.message.reply_text(
             "🗑️ *Ta bort annons*\n\n"
-            "Skriv titeln pa din annons som du vill ta bort:\n"
-            "(Vi skickar en borttagningsbegaran till admin)",
+            "Skriv titeln på din annons:",
             parse_mode="Markdown"
         )
         return GET_DELETE_ID
-    elif "Sök" in text:
-        await update.message.reply_text("🔍 Se alla annonser:\n👉 @listoo_se\n\nlistoo.se")
-        return MAIN_MENU
+
     elif "Support" in text:
         await update.message.reply_text(
             "📞 *Support*\n\n"
             "📧 info@listoo.se\n"
             "🌐 listoo.se\n"
-            "📢 @listoo_se\n\n"
-            "Vi svarar inom 24 timmar!",
+            "📢 @listoo_se",
             parse_mode="Markdown"
         )
         return MAIN_MENU
+
     return MAIN_MENU
 
 # ── مراحل ثبت آگهی ──
 async def get_title(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['title'] = update.message.text
-    await update.message.reply_text("✍️ Beskriv varan/jobbet:")
+    await update.message.reply_text("✍️ Beskriv varan:")
     return GET_DESC
 
 async def get_desc(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['desc'] = update.message.text
-    label = "💰 Pris (kr):" if ctx.user_data.get('type') == 'annons' else "💰 Lon (kr/man):"
+    label = "💰 Lon (kr/man):" if ctx.user_data.get('type') == 'jobb' else "💰 Pris (kr):"
     await update.message.reply_text(label)
     return GET_PRICE
 
@@ -104,27 +117,23 @@ async def skip_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📬 Din e-post eller telefon:")
     return GET_CONTACT
 
-# ── درخواست حذف آگهی ──
+# ── درخواست حذف ──
 async def get_delete_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     title = update.message.text
     user = update.message.from_user
     username = user.username or user.first_name
 
-    # ارسال درخواست به ادمین
-    keyboard = [
-        [
-            InlineKeyboardButton("✅ حذف کن", callback_data=f"delete_{user.id}_{title[:20]}"),
-            InlineKeyboardButton("❌ رد کن", callback_data=f"nodelet_{user.id}")
-        ]
-    ]
+    keyboard = [[
+        InlineKeyboardButton("✅ حذف کن", callback_data=f"delete_{user.id}_{title[:20]}"),
+        InlineKeyboardButton("❌ رد کن", callback_data=f"nodelet_{user.id}")
+    ]]
     markup = InlineKeyboardMarkup(keyboard)
 
     await ctx.bot.send_message(
         chat_id=ADMIN_ID,
         text=f"🗑️ *درخواست حذف آگهی*\n\n"
              f"👤 کاربر: @{username}\n"
-             f"📌 عنوان: *{title}*\n\n"
-             f"آیا این آگهی رو از کانال حذف کنی؟",
+             f"📌 عنوان: *{title}*",
         parse_mode="Markdown",
         reply_markup=markup
     )
@@ -136,18 +145,23 @@ async def get_delete_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     )
     return MAIN_MENU
 
-# ── ارسال به ادمین برای تأیید ──
+# ── ارسال به ادمین ──
 async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['contact'] = update.message.text
     ctx.user_data['user_id'] = update.message.from_user.id
     ctx.user_data['username'] = update.message.from_user.username or update.message.from_user.first_name
     d = ctx.user_data
 
-    ad_type = "📦 ANNONS" if d['type'] == 'annons' else "💼 JOBB"
-    price_label = "💰 Pris" if d['type'] == 'annons' else "💰 Lon"
+    cat = d.get('category', 'övrigt').upper()
+    cat_emojis = {
+        'BOSTAD': '🏠', 'FORDON': '🚗', 'ELEKTRONIK': '📱',
+        'MÖBLER': '🛋️', 'JOBB': '💼', 'ÖVRIGT': '📦'
+    }
+    emoji = cat_emojis.get(cat, '📦')
+    price_label = "💰 Lon" if d['type'] == 'jobb' else "💰 Pris"
 
     caption = (
-        f"🟠 *{ad_type} — Listoo*\n\n"
+        f"🟠 *{emoji} {cat} — Listoo*\n\n"
         f"📌 *{d['title']}*\n\n"
         f"📝 {d['desc']}\n\n"
         f"{price_label}: *{d['price']} kr*\n"
@@ -156,12 +170,10 @@ async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"✅ listoo.se"
     )
 
-    keyboard = [
-        [
-            InlineKeyboardButton("✅ تأیید و انتشار", callback_data=f"approve_{d['user_id']}"),
-            InlineKeyboardButton("❌ رد کردن", callback_data=f"reject_{d['user_id']}")
-        ]
-    ]
+    keyboard = [[
+        InlineKeyboardButton("✅ تأیید", callback_data=f"approve_{d['user_id']}"),
+        InlineKeyboardButton("❌ رد", callback_data=f"reject_{d['user_id']}")
+    ]]
     markup = InlineKeyboardMarkup(keyboard)
 
     ctx.bot_data[str(d['user_id'])] = {
@@ -170,27 +182,18 @@ async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         'user_id': d['user_id']
     }
 
-    admin_text = (
-        f"⚠️ *آگهی جدید برای تأیید*\n\n"
-        f"👤 کاربر: @{d['username']}\n\n"
-        f"{caption}"
-    )
+    admin_text = f"⚠️ *آگهی جدید — {emoji} {cat}*\n\n👤 @{d['username']}\n\n{caption}"
 
     try:
         if d.get('photo'):
             await ctx.bot.send_photo(
-                chat_id=ADMIN_ID,
-                photo=d['photo'],
-                caption=admin_text,
-                parse_mode="Markdown",
-                reply_markup=markup
+                chat_id=ADMIN_ID, photo=d['photo'],
+                caption=admin_text, parse_mode="Markdown", reply_markup=markup
             )
         else:
             await ctx.bot.send_message(
-                chat_id=ADMIN_ID,
-                text=admin_text,
-                parse_mode="Markdown",
-                reply_markup=markup
+                chat_id=ADMIN_ID, text=admin_text,
+                parse_mode="Markdown", reply_markup=markup
             )
     except Exception as e:
         logging.error(f"Error: {e}")
@@ -202,7 +205,7 @@ async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data.clear()
     return ConversationHandler.END
 
-# ── ادمین تأیید یا رد می‌کنه ──
+# ── تأیید/رد ادمین ──
 async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -218,18 +221,13 @@ async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             try:
                 if ad.get('photo'):
                     await ctx.bot.send_photo(
-                        chat_id=CHANNEL_ID,
-                        photo=ad['photo'],
-                        caption=ad['caption'],
-                        parse_mode="Markdown",
-                        reply_markup=markup
+                        chat_id=CHANNEL_ID, photo=ad['photo'],
+                        caption=ad['caption'], parse_mode="Markdown", reply_markup=markup
                     )
                 else:
                     await ctx.bot.send_message(
-                        chat_id=CHANNEL_ID,
-                        text=ad['caption'],
-                        parse_mode="Markdown",
-                        reply_markup=markup
+                        chat_id=CHANNEL_ID, text=ad['caption'],
+                        parse_mode="Markdown", reply_markup=markup
                     )
                 await ctx.bot.send_message(
                     chat_id=int(user_id),
@@ -243,7 +241,7 @@ async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         elif action == "reject":
             await ctx.bot.send_message(
                 chat_id=int(user_id),
-                text="❌ *متأسفانه آگهی شما تأیید نشد.*\n\nبرای اطلاعات: info@listoo.se",
+                text="❌ *آگهی شما تأیید نشد.*\n\nبرای اطلاعات: info@listoo.se",
                 parse_mode="Markdown"
             )
             await query.edit_message_text("❌ آگهی رد شد!")
@@ -255,18 +253,18 @@ async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         title = parts[2] if len(parts) > 2 else "نامشخص"
         await ctx.bot.send_message(
             chat_id=int(user_id),
-            text=f"✅ آگهی *{title}* از کانال حذف شد!\n\nممنون از استفاده از Listoo 🟠",
+            text=f"✅ آگهی *{title}* حذف شد! 🟠",
             parse_mode="Markdown"
         )
-        await query.edit_message_text(f"✅ درخواست حذف تأیید شد!\nعنوان: {title}\n\n⚠️ خودت باید پیام رو از کانال پاک کنی!")
+        await query.edit_message_text(f"✅ حذف تأیید شد!\n⚠️ خودت از کانال پاک کن!")
 
     elif data.startswith("nodelet_"):
         user_id = data.split('_')[1]
         await ctx.bot.send_message(
             chat_id=int(user_id),
-            text="❌ درخواست حذف رد شد.\n\nبرای اطلاعات بیشتر: info@listoo.se"
+            text="❌ درخواست حذف رد شد.\n\nبرای اطلاعات: info@listoo.se"
         )
-        await query.edit_message_text("❌ درخواست حذف رد شد!")
+        await query.edit_message_text("❌ درخواست رد شد!")
 
 # ── CANCEL ──
 async def cancel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -299,7 +297,7 @@ def main():
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(handle_approval))
 
-    print("🟠 Listoo Bot v2 در حال اجراست...")
+    print("🟠 Listoo Bot v3 در حال اجراست...")
     app.run_polling()
 
 if __name__ == "__main__":
