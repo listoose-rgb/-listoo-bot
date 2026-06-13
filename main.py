@@ -198,9 +198,17 @@ async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Error: {e}")
 
+    keyboard = [
+        ["🏠 Bostad", "🚗 Fordon"],
+        ["📱 Elektronik", "🛋️ Möbler"],
+        ["💼 Jobb", "📦 Övrigt"],
+        ["🗑️ Ta bort annons", "📞 Support"]
+    ]
+    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
-        "✅ *Tack! Din annons granskas.*\n\nVi publicerar den inom kort! 🟠",
-        parse_mode="Markdown"
+        "✅ *Tack! Din annons granskas.*\n\nVi publicerar den inom kort! 🟠\n\nVill du lägga upp en ny annons? Välj kategori 👇",
+        parse_mode="Markdown",
+        reply_markup=markup
     )
     ctx.user_data.clear()
     return ConversationHandler.END
