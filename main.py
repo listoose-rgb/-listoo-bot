@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Listoo Telegram Bot v4
+# Listoo Telegram Bot v5
 # @Listoo_se_bot
 
 import logging
@@ -28,7 +28,7 @@ MENU_KEYBOARD = [
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     markup = ReplyKeyboardMarkup(MENU_KEYBOARD, resize_keyboard=True)
     await update.message.reply_text(
-        "🟠 Välkommen till *Listoo*!\n\nKöp, sälj och hitta jobb.\n\nVälj en kategori 👇",
+        "Välkommen till *Listoo*\nKöp, sälj och hitta jobb\n\nVälj kategori 👇",
         parse_mode="Markdown",
         reply_markup=markup
     )
@@ -37,27 +37,27 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def main_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     categories = {
-        "🏠 Bostad": "bostad",
-        "🚗 Fordon": "fordon",
-        "📱 Elektronik": "elektronik",
-        "🛋️ Möbler": "möbler",
-        "💼 Jobb": "jobb",
-        "📦 Övrigt": "övrigt"
+        "🏠 Bostad": "Bostad",
+        "🚗 Fordon": "Fordon",
+        "📱 Elektronik": "Elektronik",
+        "🛋️ Möbler": "Möbler",
+        "💼 Jobb": "Jobb",
+        "📦 Övrigt": "Övrigt"
     }
     if text in categories:
         ctx.user_data['category'] = categories[text]
         ctx.user_data['type'] = 'jobb' if text == "💼 Jobb" else 'annons'
         await update.message.reply_text(
-            text + "\n\nSkriv en titel för din annons:",
+            "*" + categories[text] + "*\n\nSkriv en titel:",
             parse_mode="Markdown"
         )
         return GET_TITLE
     elif "bort" in text:
-        await update.message.reply_text("🗑️ Skriv titeln på annonsen du vill ta bort:")
+        await update.message.reply_text("Skriv titeln på annonsen du vill ta bort:")
         return GET_DELETE_ID
     elif "Support" in text:
         await update.message.reply_text(
-            "📞 *Support*\n\n📧 info@listoo.se\n🌐 listoo.se\n📢 @listoo_se",
+            "*Support*\n\nE-post: info@listoo.se\nWebb: listoo.se",
             parse_mode="Markdown"
         )
         return MAIN_MENU
@@ -65,23 +65,23 @@ async def main_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def get_title(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['title'] = update.message.text
-    await update.message.reply_text("✍️ Beskriv varan:")
+    await update.message.reply_text("Beskriv varan:")
     return GET_DESC
 
 async def get_desc(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['desc'] = update.message.text
-    label = "💰 Lön (kr/mån):" if ctx.user_data.get('type') == 'jobb' else "💰 Pris (kr):"
+    label = "Lön (kr/mån):" if ctx.user_data.get('type') == 'jobb' else "Pris (kr):"
     await update.message.reply_text(label)
     return GET_PRICE
 
 async def get_price(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['price'] = update.message.text
-    await update.message.reply_text("📍 Stad/ort:")
+    await update.message.reply_text("Ort/stad:")
     return GET_LOCATION
 
 async def get_location(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['location'] = update.message.text
-    await update.message.reply_text("📸 Skicka ett foto!\n(eller /skip)")
+    await update.message.reply_text("Skicka ett foto\n(eller /skip för att hoppa över)")
     return GET_PHOTO
 
 async def get_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -89,12 +89,12 @@ async def get_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         ctx.user_data['photo'] = update.message.photo[-1].file_id
     else:
         ctx.user_data['photo'] = None
-    await update.message.reply_text("📬 Din e-post eller telefon:")
+    await update.message.reply_text("Din e-post eller telefon:")
     return GET_CONTACT
 
 async def skip_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['photo'] = None
-    await update.message.reply_text("📬 Din e-post eller telefon:")
+    await update.message.reply_text("Din e-post eller telefon:")
     return GET_CONTACT
 
 async def get_delete_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -102,19 +102,16 @@ async def get_delete_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     username = user.username or user.first_name
     keyboard = [[
-        InlineKeyboardButton("✅ حذف کن", callback_data="delete_" + str(user.id) + "_" + title[:20]),
-        InlineKeyboardButton("❌ رد کن", callback_data="nodelet_" + str(user.id))
+        InlineKeyboardButton("Ta bort", callback_data="delete_" + str(user.id) + "_" + title[:20]),
+        InlineKeyboardButton("Avbryt", callback_data="nodelet_" + str(user.id))
     ]]
     await ctx.bot.send_message(
         chat_id=ADMIN_ID,
-        text="🗑️ درخواست حذف\n\n👤 @" + username + "\n📌 " + title,
+        text="Borttagningsbegäran\n\nAnvändare: @" + username + "\nTitel: " + title,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
     markup = ReplyKeyboardMarkup(MENU_KEYBOARD, resize_keyboard=True)
-    await update.message.reply_text(
-        "✅ درخواست حذف ارسال شد!\nادمین بررسی می‌کنه. 🟠",
-        reply_markup=markup
-    )
+    await update.message.reply_text("Din begäran är skickad!", reply_markup=markup)
     return MAIN_MENU
 
 async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -123,52 +120,64 @@ async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data['username'] = update.message.from_user.username or update.message.from_user.first_name
     d = ctx.user_data
 
-    cat = d.get('category', 'ovrigt').upper()
-    cat_emojis = {
-        'BOSTAD': '🏠', 'FORDON': '🚗', 'ELEKTRONIK': '📱',
-        'MOBLER': '🛋️', 'JOBB': '💼', 'OVRIGT': '📦'
-    }
-    emoji = cat_emojis.get(cat, '📦')
-    price_label = "💰 Lön" if d['type'] == 'jobb' else "💰 Pris"
+    cat = d.get('category', 'Övrigt')
+    price_label = "Lön" if d['type'] == 'jobb' else "Pris"
 
-    short_caption = emoji + " *" + d['title'] + "*\n" + price_label + ": *" + d['price'] + " kr*\n📍 " + d['location'] + "\n\n🟠 listoo.se"
-    full_info = emoji + " *" + d['title'] + "*\n\n📝 " + d['desc'] + "\n\n" + price_label + ": *" + d['price'] + " kr*\n📍 " + d['location'] + "\n\n📬 Kontakt: `" + d['contact'] + "`\n\n✅ listoo.se"
+    # Blocket-style short caption - clean and minimal
+    short_caption = (
+        "*" + d['title'] + "*\n"
+        + price_label + ": " + d['price'] + " kr\n"
+        + d['location']
+    )
 
+    # Full info stored in callback_data style - encoded in button
+    full_text = (
+        d['title'] + "\n\n"
+        + d['desc'] + "\n\n"
+        + price_label + ": " + d['price'] + " kr\n"
+        + "Ort: " + d['location'] + "\n\n"
+        + "Kontakt: " + d['contact']
+    )
+
+    # Store full info
     ad_id = str(d['user_id'])
     ctx.bot_data[ad_id] = {
-        'caption': short_caption,
-        'full_info': full_info,
+        'short': short_caption,
+        'full': full_text,
         'photo': d.get('photo'),
-        'user_id': d['user_id']
+        'user_id': d['user_id'],
+        'cat': cat
     }
 
-    keyboard = [[
-        InlineKeyboardButton("✅ تأیید", callback_data="approve_" + ad_id),
-        InlineKeyboardButton("❌ رد", callback_data="reject_" + ad_id)
+    keyboard_admin = [[
+        InlineKeyboardButton("Godkänn", callback_data="approve_" + ad_id),
+        InlineKeyboardButton("Neka", callback_data="reject_" + ad_id)
     ]]
 
-    admin_text = "⚠️ آگهی جدید — " + emoji + " " + cat + "\n\n👤 @" + d['username'] + "\n\n" + full_info
+    admin_text = (
+        "Ny annons - " + cat + "\n"
+        + "Användare: @" + d['username'] + "\n\n"
+        + full_text
+    )
 
     try:
         if d.get('photo'):
             await ctx.bot.send_photo(
                 chat_id=ADMIN_ID, photo=d['photo'],
-                caption=admin_text, parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(keyboard)
+                caption=admin_text,
+                reply_markup=InlineKeyboardMarkup(keyboard_admin)
             )
         else:
             await ctx.bot.send_message(
                 chat_id=ADMIN_ID, text=admin_text,
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(keyboard)
+                reply_markup=InlineKeyboardMarkup(keyboard_admin)
             )
     except Exception as e:
         logging.error(str(e))
 
     markup = ReplyKeyboardMarkup(MENU_KEYBOARD, resize_keyboard=True)
     await update.message.reply_text(
-        "✅ *Tack! Din annons granskas.*\n\nVi publicerar den inom kort! 🟠\n\nVälj kategori för ny annons 👇",
-        parse_mode="Markdown",
+        "Tack! Din annons granskas och publiceras inom kort.\n\nVälj kategori för ny annons 👇",
         reply_markup=markup
     )
     ctx.user_data.clear()
@@ -180,75 +189,74 @@ async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     data = query.data
 
     if data.startswith("approve_"):
-        user_id = data.replace("approve_", "")
-        ad = ctx.bot_data.get(user_id)
+        ad_id = data.replace("approve_", "")
+        ad = ctx.bot_data.get(ad_id)
         if ad:
-            keyboard = [[
-                InlineKeyboardButton("📋 Visa mer info", callback_data="info_" + user_id),
-                InlineKeyboardButton("🌐 Listoo.se", url="https://listoo.se")
+            # Blocket-style channel post
+            keyboard_ch = [[
+                InlineKeyboardButton("Kontaktinfo", callback_data="info_" + ad_id),
+                InlineKeyboardButton("listoo.se", url="https://listoo.se")
             ]]
-            markup = InlineKeyboardMarkup(keyboard)
+            markup_ch = InlineKeyboardMarkup(keyboard_ch)
             try:
                 if ad.get('photo'):
                     await ctx.bot.send_photo(
-                        chat_id=CHANNEL_ID, photo=ad['photo'],
-                        caption=ad['caption'], parse_mode="Markdown",
-                        reply_markup=markup
+                        chat_id=CHANNEL_ID,
+                        photo=ad['photo'],
+                        caption=ad['short'],
+                        parse_mode="Markdown",
+                        reply_markup=markup_ch
                     )
                 else:
                     await ctx.bot.send_message(
-                        chat_id=CHANNEL_ID, text=ad['caption'],
-                        parse_mode="Markdown", reply_markup=markup
+                        chat_id=CHANNEL_ID,
+                        text=ad['short'],
+                        parse_mode="Markdown",
+                        reply_markup=markup_ch
                     )
                 await ctx.bot.send_message(
-                    chat_id=int(user_id),
-                    text="🎉 آگهی شما منتشر شد!\n\n👉 @listoo_se",
-                    parse_mode="Markdown"
+                    chat_id=int(ad_id),
+                    text="Din annons är nu publicerad!\n\n@listoo_se"
                 )
-                await query.edit_message_text("✅ آگهی منتشر شد!")
+                await query.edit_message_text("Annons publicerad!")
             except Exception as e:
                 logging.error(str(e))
-        ctx.bot_data.pop(user_id, None)
 
     elif data.startswith("reject_"):
-        user_id = data.replace("reject_", "")
-        await ctx.bot.send_message(
-            chat_id=int(user_id),
-            text="❌ آگهی شما تأیید نشد.\n\nاطلاعات: info@listoo.se"
-        )
-        await query.edit_message_text("❌ آگهی رد شد!")
-        ctx.bot_data.pop(user_id, None)
+        ad_id = data.replace("reject_", "")
+        ad = ctx.bot_data.get(ad_id)
+        if ad:
+            await ctx.bot.send_message(
+                chat_id=int(ad_id),
+                text="Din annons godkändes inte.\nKontakta oss: info@listoo.se"
+            )
+        await query.edit_message_text("Annons nekad.")
+        ctx.bot_data.pop(ad_id, None)
 
     elif data.startswith("info_"):
-        user_id = data.replace("info_", "")
-        ad = ctx.bot_data.get(user_id)
+        ad_id = data.replace("info_", "")
+        ad = ctx.bot_data.get(ad_id)
         if ad:
-            await query.answer(ad.get('full_info', 'اطلاعات موجود نیست'), show_alert=True)
+            await query.answer(ad.get('full', 'Info ej tillgänglig'), show_alert=True)
         else:
-            await query.answer("اطلاعات در دسترس نیست", show_alert=True)
+            await query.answer("Info ej tillgänglig längre.", show_alert=True)
 
     elif data.startswith("delete_"):
         parts = data.split("_", 2)
         user_id = parts[1]
-        title = parts[2] if len(parts) > 2 else "نامشخص"
-        await ctx.bot.send_message(
-            chat_id=int(user_id),
-            text="✅ آگهی " + title + " حذف شد! 🟠"
-        )
-        await query.edit_message_text("✅ حذف تأیید شد!\n⚠️ خودت از کانال پاک کن!")
+        title = parts[2] if len(parts) > 2 else ""
+        await ctx.bot.send_message(chat_id=int(user_id), text="Din annons har tagits bort.")
+        await query.edit_message_text("Annons borttagen. Ta bort manuellt från kanalen.")
 
     elif data.startswith("nodelet_"):
         user_id = data.replace("nodelet_", "")
-        await ctx.bot.send_message(
-            chat_id=int(user_id),
-            text="❌ درخواست حذف رد شد."
-        )
-        await query.edit_message_text("❌ درخواست رد شد!")
+        await ctx.bot.send_message(chat_id=int(user_id), text="Borttagningsbegäran nekad.")
+        await query.edit_message_text("Nekad.")
 
 async def cancel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data.clear()
     markup = ReplyKeyboardMarkup(MENU_KEYBOARD, resize_keyboard=True)
-    await update.message.reply_text("❌ Avbröts.", reply_markup=markup)
+    await update.message.reply_text("Avbröts.", reply_markup=markup)
     return MAIN_MENU
 
 def main():
@@ -273,7 +281,7 @@ def main():
     )
     app.add_handler(conv)
     app.add_handler(CallbackQueryHandler(handle_approval))
-    print("🟠 Listoo Bot v4 در حال اجراست...")
+    print("Listoo Bot v5 running...")
     app.run_polling()
 
 if __name__ == "__main__":
