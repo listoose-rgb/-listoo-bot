@@ -287,7 +287,7 @@ def main():
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu)],
+            MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu), CommandHandler("start", start)],
             GET_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_title)],
             GET_DESC: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_desc)],
             GET_PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_price)],
@@ -299,7 +299,8 @@ def main():
             GET_CONTACT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_contact)],
             GET_DELETE_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_delete_id)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", cancel), CommandHandler("start", start)],
+        allow_reentry=True,
     )
 
     app.add_handler(conv)
