@@ -242,7 +242,6 @@ async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                     )
                 elif len(photos) > 1:
                     media = [InputMediaPhoto(media=p) for p in photos]
-                    media[0] = InputMediaPhoto(media=photos[0], caption=ad['short'], parse_mode="Markdown")
                     await ctx.bot.send_media_group(chat_id=CHANNEL_ID, media=media)
                     await ctx.bot.send_message(
                         chat_id=CHANNEL_ID,
