@@ -158,17 +158,47 @@ async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         'MÖBLER': '🛋️', 'JOBB': '💼', 'ÖVRIGT': '📦'
     }
     emoji = cat_emojis.get(cat, '📦')
-    price_label = "💰 Lon" if d['type'] == 'jobb' else "💰 Pris"
+    price_label = "💰 Lön" if d['type'] == 'jobb' else "💰 Pris"
 
-    caption = (
-        f"🟠 *{emoji} {cat} — Listoo*\n\n"
-        f"📌 *{d['title']}*\n\n"
-        f"📝 {d['desc']}\n\n"
-        f"{price_label}: *{d['price']} kr*\n"
-        f"📍 {d['location']}\n\n"
-        f"📬 Kontakt: `{d['contact']}`\n\n"
+    # متن کوتاه برای کانال
+    short_caption = (
+        f"{emoji} *{d['title']}*
+"
+        f"{price_label}: *{d['price']} kr*
+"
+        f"📍 {d['location']}
+
+"
+        f"🟠 listoo.se"
+    )
+
+    # متن کامل برای وقتی دکمه زده میشه
+    full_info = (
+        f"{emoji} *{d['title']}*
+
+"
+        f"📝 {d['desc']}
+
+"
+        f"{price_label}: *{d['price']} kr*
+"
+        f"📍 {d['location']}
+
+"
+        f"📬 Kontakt: `{d['contact']}`
+
+"
         f"✅ listoo.se"
     )
+
+    # ذخیره اطلاعات کامل
+    ad_id = str(d['user_id'])
+    ctx.bot_data[ad_id] = {
+        'caption': short_caption,
+        'full_info': full_info,
+        'photo': d.get('photo'),
+        'user_id': d['user_id']
+    }
 
     keyboard = [[
         InlineKeyboardButton("✅ تأیید", callback_data=f"approve_{d['user_id']}"),
@@ -176,13 +206,11 @@ async def get_contact(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ]]
     markup = InlineKeyboardMarkup(keyboard)
 
-    ctx.bot_data[str(d['user_id'])] = {
-        'caption': caption,
-        'photo': d.get('photo'),
-        'user_id': d['user_id']
-    }
+    admin_text = f"⚠️ *آگهی جدید — {emoji} {cat}*
 
-    admin_text = f"⚠️ *آگهی جدید — {emoji} {cat}*\n\n👤 @{d['username']}\n\n{caption}"
+👤 @{d['username']}
+
+{full_info}"
 
     try:
         if d.get('photo'):
@@ -224,7 +252,10 @@ async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         ad = ctx.bot_data.get(user_id)
 
         if action == "approve" and ad:
-            keyboard = [[InlineKeyboardButton("🌐 Listoo.se", url="https://listoo.se")]]
+            keyboard = [[
+                InlineKeyboardButton("📋 Visa mer info", callback_data=f"info_{user_id}"),
+                InlineKeyboardButton("🌐 Listoo.se", url="https://listoo.se")
+            ]]
             markup = InlineKeyboardMarkup(keyboard)
             try:
                 if ad.get('photo'):
@@ -254,6 +285,14 @@ async def handle_approval(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             )
             await query.edit_message_text("❌ آگهی رد شد!")
         ctx.bot_data.pop(user_id, None)
+
+    elif data.startswith("info_"):
+        user_id = data.split('_')[1]
+        ad = ctx.bot_data.get(user_id)
+        if ad:
+            await query.answer(ad.get('full_info', 'اطلاعات موجود نیست'), show_alert=True)
+        else:
+            await query.answer('اطلاعات در دسترس نیست', show_alert=True)
 
     elif data.startswith("delete_"):
         parts = data.split('_', 2)
